@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "@scriptable-ios/eslint-config": "^1.7.0",
+    "@types/scriptable-ios": "^1.7.7"
+  }
+}
