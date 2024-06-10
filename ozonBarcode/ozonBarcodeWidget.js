@@ -1,6 +1,6 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: deep-green; icon-glyph: magic;
+// icon-color: deep-gray; icon-glyph: magic;
 
 // This script was created by Artem Tiumentcev
 
@@ -263,6 +263,14 @@ async function getAuthHeader() {
     return authHeader;
 }
 
+// show emoji
+function showEmoji(widget) {
+    let emoji = widget.addText('📦✈️🚚📬');
+    emoji.font = Font.boldSystemFont(50);
+    emoji.centerAlignText()
+    emoji.textColor = new Color("#000000");
+}
+
 async function createWidget(authHeader) {
     let widget = new ListWidget();
     widget.backgroundColor = new Color("#FFFFFF");
@@ -270,32 +278,33 @@ async function createWidget(authHeader) {
     let jsonData = await request('composer-api.bx/page/json/v2?url=/my/orderlist/barcode/', 'GET', authHeader);
     let barcodeStateId = Object.keys(jsonData.widgetStates).find(key => key.startsWith('barcode'));
 
-    if (barcodeStateId) {
-        let barcodeData = JSON.parse(jsonData.widgetStates[barcodeStateId]);
+    if (!barcodeStateId) {
+        showEmoji(widget);
 
-        if (barcodeData && barcodeData.shipments && barcodeData.shipments[0] && barcodeData.shipments[0].code) {
-            let code = barcodeData.shipments[0].code;
-            let reqBarcodeImage = await new Request('https://api.ozon.ru/my-account-api-gateway.bx/codes/v1/generate?code=' + code + '&height=198&type=bar&width=670');
-            let barcodeImage = await reqBarcodeImage.loadImage();
-            let barcodeImageElement = widget.addImage(barcodeImage);
-            barcodeImageElement.centerAlignImage();
-        }
-
-        // hint
-        if (barcodeData && barcodeData.shipments && barcodeData.shipments[0] && barcodeData.shipments[0].hint) {
-            widget.addSpacer(5);
-            let hint = widget.addText(barcodeData.shipments[0].hint);
-            hint.font = Font.boldSystemFont(25);
-            hint.centerAlignText()
-            hint.textColor = new Color("#000000");
-        }
-    } else {
-        // show emoji if poop
-        let emoji = widget.addText('📦✈️🚚📬');
-        emoji.font = Font.boldSystemFont(50);
-        emoji.centerAlignText()
-        emoji.textColor = new Color("#000000");
+        return widget;
     }
+
+    let barcodeData = JSON.parse(jsonData.widgetStates[barcodeStateId]);
+
+    if (!barcodeData.shipments || barcodeData.shipments.length === 0 || (!barcodeData.shipments[0].hasOwnProperty('code') && !barcodeData.shipments[0].hasOwnProperty('hint'))) {
+        showEmoji(widget);
+
+        return widget;
+    }
+
+    // barcode
+    let code = barcodeData.shipments[0].code;
+    let reqBarcodeImage = await new Request('https://api.ozon.ru/my-account-api-gateway.bx/codes/v1/generate?code=' + code + '&height=198&type=bar&width=670');
+    let barcodeImage = await reqBarcodeImage.loadImage();
+    let barcodeImageElement = widget.addImage(barcodeImage);
+    barcodeImageElement.centerAlignImage();
+
+    // hint
+    widget.addSpacer(5);
+    let hint = widget.addText(barcodeData.shipments[0].hint);
+    hint.font = Font.boldSystemFont(25);
+    hint.centerAlignText()
+    hint.textColor = new Color("#000000");
 
     // Return the created widget
     return widget;
